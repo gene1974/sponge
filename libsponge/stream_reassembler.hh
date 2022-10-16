@@ -18,11 +18,7 @@ class StreamReassembler {
     // Your code here -- add private members as necessary.
     size_t _cur_index; // 下一个该发送到流的数据的序列号
     size_t _end_index; // last index
-    // size_t _assembled_bytes; // last index
-    size_t _unassembled_bytes; // bytes stored but not reassembled
-    std::vector<std::pair<std::string, size_t>> _buffer; // 未写入的
-    void _send_str(const std::string data);
-    void _check_overlap();
+    std::unordered_map<size_t, char> _buffer;
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
