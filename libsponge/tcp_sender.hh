@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <queue>
+#include <unordered_map>
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -31,6 +32,15 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    size_t _window_size;
+    WrappingInt32 _ackno;
+    std::unordered_map<uint64_t, TCPSegment> _outstand;
+    std::unordered_map<uint64_t, size_t> _timer;
+
+    size_t _cur_time;
+    unsigned int _retrans_timeout; // retransmission timeout
+    size_t _retrans_num; // record consecutive retransmissions
 
   public:
     //! Initialize a TCPSender
@@ -87,6 +97,8 @@ class TCPSender {
     //! \brief relative seqno for the next byte to be sent
     WrappingInt32 next_seqno() const { return wrap(_next_seqno, _isn); }
     //!@}
+
+    void check_ack();
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH

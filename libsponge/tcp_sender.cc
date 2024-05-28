@@ -22,17 +22,55 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     , _initial_retransmission_timeout{retx_timeout}
     , _stream(capacity) {}
 
-uint64_t TCPSender::bytes_in_flight() const { return {}; }
+uint64_t TCPSender::bytes_in_flight() const {
+    return {};
+}
 
-void TCPSender::fill_window() {}
+void TCPSender::fill_window() {
+    while(true && !stream_in().buffer_empty()){
+        Buffer payload = stream_in().read(TCPConfig::MAX_PAYLOAD_SIZE);
+        TCPSegment seg;
+        seg.payload() = payload;
+        seg.header().seqno = wrap(_next_seqno, _isn);
+        _segments_out.push(seg);
+        _outstand[_next_seqno] = seg; // track outstanding
+        _next_seqno += 1;
+    }
+    // TODO: window size
+    // while(true && !_segments_out.empty()){
+    //     TCPSegment seg = _segments_out.front();
+    //     string str = seg.serialize().concatenate();
+    //     _stream.write(str);
+    // }
+}
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
-void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { DUMMY_CODE(ackno, window_size); }
+void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
+    DUMMY_CODE(ackno, window_size);
+    _window_size = window_size;
+    // todo: new window_size?
+    // TODO: clear outstand
+}
+
+void TCPSender::check_ack(){
+    if (_cur_time - _timer[unwrap(_ackno, _isn, 0)] >= _retrans_timeout){
+        // retrans
+        _retrans_num += 1;
+    }
+}
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void TCPSender::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void TCPSender::tick(const size_t ms_since_last_tick) {
+    DUMMY_CODE(ms_since_last_tick);
+    _cur_time += ms_since_last_tick;
+    check_ack();
+}
 
 unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
 
-void TCPSender::send_empty_segment() {}
+void TCPSender::send_empty_segment() {
+    TCPSegment seg;
+    seg.header().ackno = WrappingInt32(0);
+    _segments_out.push(seg);
+}
